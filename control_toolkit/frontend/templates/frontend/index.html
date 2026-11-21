@@ -1,0 +1,263 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control System Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'frontend/css/style.css' %}?v=7">
+    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <header class="header">
+        <div class="header-top">
+            <div class="header-left">
+                <h1>Control System Tools</h1>
+                <div class="tf-inputs">
+                    <div class="tf-method">
+                        <div class="tf-method-label">Manual Entry</div>
+                        <div class="tf-method-fields">
+                            <div class="input-group">
+                                <label>Numerator</label>
+                                <input type="text" id="num-input" value="10" placeholder="e.g. 10">
+                            </div>
+                            <div class="input-group">
+                                <label>Denominator</label>
+                                <input type="text" id="den-input" value="1 2 0" placeholder="e.g. 1 2 0">
+                            </div>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="unity-checkbox" checked>
+                                Open-loop G(s) with unity feedback
+                            </label>
+                        </div>
+                        <p class="hint">Coefficients highest power first: 1 2 0 = s² + 2s</p>
+                    </div>
+                    <div class="tf-or"><span>OR</span></div>
+                    <div class="tf-method">
+                        <div class="tf-method-label">2nd Order System</div>
+                        <div class="tf-method-fields">
+                            <div class="input-group">
+                                <label>ζ (zeta)</label>
+                                <input type="text" id="time-zeta" value="0.5">
+                            </div>
+                            <div class="input-group">
+                                <label>ωn (rad/s)</label>
+                                <input type="text" id="time-wn" value="5">
+                            </div>
+                            <button id="time-load2-btn" class="btn-header">Load TF</button>
+                        </div>
+                        <p class="hint">Generates ωn²/(s² + 2ζωns + ωn²)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <pre class="tf-display" id="tf-display">Enter transfer function...</pre>
+            </div>
+        </div>
+    </header>
+
+    <nav class="tab-nav" id="tab-nav">
+        <button class="tab-btn active" data-tab="time">📈 Time Response</button>
+        <button class="tab-btn" data-tab="frequency">📊 Frequency Response</button>
+        <button class="tab-btn" data-tab="rootlocus">🎯 Root Locus</button>
+        <button class="tab-btn" data-tab="routh">📋 Routh-Hurwitz</button>
+        <button class="tab-btn" data-tab="nichols">📉 Nichols Chart</button>
+        <button class="tab-btn" data-tab="pid">🎛️ PID Tuning</button>
+        <button class="tab-btn" data-tab="compensator">🔧 Compensator</button>
+    </nav>
+
+    <main class="main-content">
+        <!-- Time Response Tab -->
+        <section class="tab-content active" id="tab-time">
+            <div class="controls-panel">
+                <div class="input-group">
+                    <label>Signal Type</label>
+                    <select id="time-signal">
+                        <option value="Step">Step</option>
+                        <option value="Ramp">Ramp</option>
+                        <option value="Impulse">Impulse</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Final Time (s)</label>
+                    <input type="text" id="time-tfinal" placeholder="auto">
+                </div>
+                <button id="time-calc-btn" class="btn-primary">Calculate &amp; Plot</button>
+            </div>
+            <div class="results-area">
+                <div id="time-plot" class="plot-container"></div>
+                <div id="time-pzmap" class="plot-container"></div>
+                <div id="time-info" class="info-panel"></div>
+            </div>
+        </section>
+
+        <!-- Frequency Response Tab -->
+        <section class="tab-content" id="tab-frequency">
+            <div class="controls-panel">
+                <button id="freq-calc-btn" class="btn-primary">Calculate &amp; Plot</button>
+            </div>
+            <div class="results-area">
+                <div id="freq-bode-mag" class="plot-container"></div>
+                <div id="freq-bode-phase" class="plot-container"></div>
+                <div id="freq-nyquist" class="plot-container"></div>
+                <div id="freq-info" class="info-panel"></div>
+            </div>
+        </section>
+
+        <!-- Root Locus Tab -->
+        <section class="tab-content" id="tab-rootlocus">
+            <div class="controls-panel">
+                <div class="input-group">
+                    <label>K max</label>
+                    <input type="text" id="rlocus-kmax" placeholder="auto">
+                </div>
+                <div class="input-group">
+                    <label>Evaluate at K</label>
+                    <input type="text" id="rlocus-keval" placeholder="">
+                </div>
+                <div class="input-group">
+                    <label>Target ζ</label>
+                    <input type="text" id="rlocus-zeta" value="0.5">
+                </div>
+                <button id="rlocus-calc-btn" class="btn-primary">Plot Root Locus</button>
+            </div>
+            <div class="results-area">
+                <div id="rlocus-plot" class="plot-container plot-large"></div>
+                <div id="rlocus-info" class="info-panel"></div>
+            </div>
+        </section>
+
+        <!-- Routh-Hurwitz Tab -->
+        <section class="tab-content" id="tab-routh">
+            <div class="controls-panel">
+                <div class="input-group">
+                    <label>Gain K (unity fb)</label>
+                    <input type="text" id="routh-K" value="1">
+                </div>
+                <button id="routh-calc-btn" class="btn-primary">Build Routh Table</button>
+            </div>
+            <div class="results-area">
+                <div id="routh-plot" class="plot-container"></div>
+                <div id="routh-info" class="info-panel"></div>
+            </div>
+        </section>
+
+        <!-- Nichols Chart Tab -->
+        <section class="tab-content" id="tab-nichols">
+            <div class="controls-panel">
+                <div class="input-group">
+                    <label>Target Mr (dB)</label>
+                    <input type="text" id="nichols-mr" value="3">
+                </div>
+                <button id="nichols-calc-btn" class="btn-primary">Plot Nichols Chart</button>
+            </div>
+            <div class="results-area">
+                <div id="nichols-plot" class="plot-container plot-large"></div>
+                <div id="nichols-info" class="info-panel"></div>
+            </div>
+        </section>
+
+        <!-- PID Tuning Tab -->
+        <section class="tab-content" id="tab-pid">
+            <div class="controls-panel">
+                <div class="input-group">
+                    <label>Kp</label>
+                    <input type="text" id="pid-kp" value="1">
+                </div>
+                <div class="input-group">
+                    <label>Ki</label>
+                    <input type="text" id="pid-ki" value="0">
+                </div>
+                <div class="input-group">
+                    <label>Kd</label>
+                    <input type="text" id="pid-kd" value="0">
+                </div>
+                <div class="input-group">
+                    <label>Deriv. filter N</label>
+                    <input type="text" id="pid-n" value="20">
+                </div>
+                <button id="pid-calc-btn" class="btn-primary">Simulate PID</button>
+                <div class="zn-buttons">
+                    <button class="zn-btn" data-zn="P">Z-N P</button>
+                    <button class="zn-btn" data-zn="PI">Z-N PI</button>
+                    <button class="zn-btn" data-zn="PID">Z-N PID</button>
+                </div>
+            </div>
+            <div class="results-area">
+                <div id="pid-plot" class="plot-container plot-large"></div>
+                <div id="pid-info" class="info-panel"></div>
+            </div>
+        </section>
+
+        <!-- Compensator Tab -->
+        <section class="tab-content" id="tab-compensator">
+            <div class="controls-panel">
+                <div class="input-group">
+                    <label>Compensator Type</label>
+                    <select id="comp-type">
+                        <option value="Lead">Lead</option>
+                        <option value="Lag">Lag</option>
+                        <option value="Lag-Lead">Lag-Lead</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Gain K</label>
+                    <input type="text" id="comp-K" value="1">
+                </div>
+                <div class="input-group">
+                    <label>Desired PM (deg)</label>
+                    <input type="text" id="comp-pm" value="45">
+                </div>
+                <div class="input-group">
+                    <label>Safety margin (deg)</label>
+                    <input type="text" id="comp-margin" value="5">
+                </div>
+                <div class="input-group">
+                    <label>w1 (lag-lead)</label>
+                    <input type="text" id="comp-w1" placeholder="auto">
+                </div>
+                <button id="comp-calc-btn" class="btn-primary">Design Compensator</button>
+            </div>
+            <div class="results-area">
+                <div id="comp-bode-mag" class="plot-container"></div>
+                <div id="comp-bode-phase" class="plot-container"></div>
+                <div id="comp-step" class="plot-container"></div>
+                <div id="comp-info" class="info-panel"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <p class="footer-credit">Made by <strong>Ritartha Chaki</strong></p>
+            <div class="footer-links">
+                <a href="https://github.com/ritartha" target="_blank" rel="noopener noreferrer">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a>
+                <a href="mailto:ritartha@gmail.com">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+                    ritartha@gmail.com
+                </a>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="{% static 'frontend/js/app.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/plots.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/tabs/time.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/tabs/frequency.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/tabs/rootlocus.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/tabs/routh.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/tabs/nichols.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/tabs/pid.js' %}?v=7"></script>
+<script src="{% static 'frontend/js/tabs/compensator.js' %}?v=7"></script>
+</body>
+</html>
