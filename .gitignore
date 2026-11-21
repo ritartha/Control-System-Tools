@@ -1,0 +1,4 @@
+# Ignore dependency folders
+firebase/
+ref files/
+updated files py/
